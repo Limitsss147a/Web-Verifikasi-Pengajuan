@@ -76,8 +76,8 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
-    router.push('/auth/login')
-    router.refresh()
+    // Force a hard reload to clear SWR cache and any lingering React state
+    window.location.href = '/auth/login'
   }
 
   if (isLoading) {

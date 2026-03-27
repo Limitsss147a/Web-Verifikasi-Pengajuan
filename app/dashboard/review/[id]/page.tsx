@@ -43,6 +43,7 @@ export default function ReviewDetailPage() {
   const [budget, setBudget] = useState<Budget | null>(null)
   const [items, setItems] = useState<BudgetItem[]>([])
   const [revisions, setRevisions] = useState<Revision[]>([])
+  const [documents, setDocuments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null)
   const [comments, setComments] = useState('')
@@ -55,7 +56,7 @@ export default function ReviewDetailPage() {
     const supabase = createClient()
     setIsLoading(true)
 
-    const [budgetRes, itemsRes, revisionsRes] = await Promise.all([
+    const [budgetRes, itemsRes, revisionsRes, docsRes] = await Promise.all([
       supabase.from('budgets')
         .select('*, institution:institutions(name, code), program:programs(name, code), activity:activities(name, code), submitter:profiles!budgets_submitted_by_fkey(full_name, position)')
         .eq('id', budgetId).single(),
@@ -63,12 +64,32 @@ export default function ReviewDetailPage() {
       supabase.from('revisions')
         .select('*, reviewer:profiles!revisions_reviewer_id_fkey(full_name)')
         .eq('budget_id', budgetId).order('created_at', { ascending: false }),
+      supabase.from('budget_documents')
+        .select('*')
+        .eq('budget_id', budgetId).order('created_at', { ascending: false }),
     ])
 
     if (budgetRes.data) setBudget(budgetRes.data as unknown as Budget)
     if (itemsRes.data) setItems(itemsRes.data)
     if (revisionsRes.data) setRevisions(revisionsRes.data as unknown as Revision[])
+    if (docsRes.data) setDocuments(docsRes.data)
     setIsLoading(false)
+  }
+
+  async function handleDownload(doc: any) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.storage
+        .from('budget_documents')
+        .createSignedUrl(doc.file_path, 3600)
+        
+      if (error) throw error
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank')
+      }
+    } catch (error) {
+      toast.error('Gagal membuka dokumen')
+    }
   }
 
   async function handleReview() {
@@ -198,7 +219,7 @@ export default function ReviewDetailPage() {
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="rounded-lg p-2 bg-chart-1/10"><FileText className="h-4 w-4 text-chart-1" /></div>
-          <div className="min-w-0"><p className="text-xs text-muted-foreground">Program</p><p className="text-sm font-medium truncate">{(budget as any).program?.name || '-'}</p></div>
+          <div className="min-w-0"><p className="text-xs text-muted-foreground">Program</p><p className="text-sm font-medium truncate">{budget.program_name || (budget as any).program?.name || '-'}</p></div>
         </CardContent></Card>
         <Card><CardContent className="p-4 flex items-center gap-3">
           <div className="rounded-lg p-2 bg-chart-2/10"><User className="h-4 w-4 text-chart-2" /></div>
@@ -279,6 +300,32 @@ export default function ReviewDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Supporting Documents */}
+      {documents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dokumen Pendukung</CardTitle>
+            <CardDescription>File pendukung yang dilampirkan pemohon</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {documents.map((doc, index) => (
+              <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 border rounded-md">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{doc.document_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" className="shrink-0" onClick={() => handleDownload(doc)}>
+                  Lihat/Unduh
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Revision History */}
       {revisions.length > 0 && (

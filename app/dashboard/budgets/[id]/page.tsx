@@ -124,6 +124,22 @@ export default function BudgetDetailPage() {
     setIsSubmitting(false)
   }
 
+  async function handleDownload(doc: BudgetDocument) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.storage
+        .from('budget_documents')
+        .createSignedUrl(doc.file_path, 3600)
+        
+      if (error) throw error
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank')
+      }
+    } catch (error) {
+      toast.error('Gagal mengunduh dokumen')
+    }
+  }
+
   async function handleDelete() {
     const supabase = createClient()
 
@@ -261,7 +277,7 @@ export default function BudgetDetailPage() {
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Program</p>
-              <p className="text-sm font-medium truncate">{(budget as any).program?.name || '-'}</p>
+              <p className="text-sm font-medium truncate">{budget.program_name || (budget as any).program?.name || '-'}</p>
             </div>
           </CardContent>
         </Card>
@@ -337,6 +353,32 @@ export default function BudgetDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Supporting Documents */}
+      {documents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Dokumen Pendukung</CardTitle>
+            <CardDescription>File pendukung yang dilampirkan</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {documents.map((doc, index) => (
+              <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 border rounded-md">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{doc.document_type} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                </div>
+                <Button variant="secondary" size="sm" className="shrink-0" onClick={() => handleDownload(doc)}>
+                  Lihat/Unduh
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Revision History */}
       <Card>

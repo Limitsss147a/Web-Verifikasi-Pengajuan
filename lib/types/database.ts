@@ -86,6 +86,9 @@ export interface Budget {
   program_id: string | null
   activity_id: string | null
   sub_activity_id: string | null
+  program_name: string | null
+  activity_name: string | null
+  sub_activity_name: string | null
   fiscal_year_id: string
   submitted_by: string | null
   reviewed_by: string | null
@@ -190,6 +193,9 @@ export interface BudgetFormData {
   program_id?: string
   activity_id?: string
   sub_activity_id?: string
+  program_name?: string
+  activity_name?: string
+  sub_activity_name?: string
   items: BudgetItemFormData[]
 }
 

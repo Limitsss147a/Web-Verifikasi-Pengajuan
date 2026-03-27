@@ -64,63 +64,13 @@ export default function NewBudgetPage() {
   const { profile, isLoading: profileLoading } = useProfile()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [programId, setProgramId] = useState('')
-  const [activityId, setActivityId] = useState('')
-  const [subActivityId, setSubActivityId] = useState('')
+  const [programName, setProgramName] = useState('')
+  const [activityName, setActivityName] = useState('')
+  const [subActivityName, setSubActivityName] = useState('')
   const [items, setItems] = useState<BudgetItemRow[]>([{ ...emptyItem }])
 
-  const [programs, setPrograms] = useState<Program[]>([])
-  const [activities, setActivities] = useState<Activity[]>([])
-  const [subActivities, setSubActivities] = useState<SubActivity[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [documents, setDocuments] = useState<DocumentUpload[]>([])
-
-  useEffect(() => {
-    if (!profileLoading && profile) fetchPrograms()
-  }, [profileLoading, profile])
-
-  useEffect(() => {
-    if (programId) fetchActivities(programId)
-    else { setActivities([]); setActivityId('') }
-  }, [programId])
-
-  useEffect(() => {
-    if (activityId) fetchSubActivities(activityId)
-    else { setSubActivities([]); setSubActivityId('') }
-  }, [activityId])
-
-  async function fetchPrograms() {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('programs')
-      .select('*')
-      .order('code')
-      
-    if (error) {
-      console.error("Error fetching programs:", error.message)
-    }
-    if (data) setPrograms(data)
-  }
-
-  async function fetchActivities(progId: string) {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('program_id', progId)
-      .order('code')
-    if (data) setActivities(data)
-  }
-
-  async function fetchSubActivities(actId: string) {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('sub_activities')
-      .select('*')
-      .eq('activity_id', actId)
-      .order('code')
-    if (data) setSubActivities(data)
-  }
 
   function addItem() {
     setItems(prev => [...prev, { ...emptyItem }])
@@ -200,9 +150,9 @@ export default function NewBudgetPage() {
           description: description || null,
           institution_id: profile!.institution_id,
           fiscal_year_id: fiscalYear.id,
-          program_id: programId || null,
-          activity_id: activityId || null,
-          sub_activity_id: subActivityId || null,
+          program_name: programName || null,
+          activity_name: activityName || null,
+          sub_activity_name: subActivityName || null,
           submitted_by: profile!.id,
           status: 'draft', // Always draft during insertion due to RLS policies
           submission_date: asDraft ? null : new Date().toISOString(),
@@ -337,50 +287,29 @@ export default function NewBudgetPage() {
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
               <Label>Program</Label>
-              <Select value={programId} onValueChange={setProgramId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {programs.map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.code} - {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={programName}
+                onChange={(e) => setProgramName(e.target.value)}
+                placeholder="Masukkan nama program"
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Kegiatan</Label>
-              <Select value={activityId} onValueChange={setActivityId} disabled={!programId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih kegiatan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activities.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.code} - {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={activityName}
+                onChange={(e) => setActivityName(e.target.value)}
+                placeholder="Masukkan nama kegiatan"
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Sub Kegiatan</Label>
-              <Select value={subActivityId} onValueChange={setSubActivityId} disabled={!activityId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih sub kegiatan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subActivities.map(sa => (
-                    <SelectItem key={sa.id} value={sa.id}>
-                      {sa.code} - {sa.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={subActivityName}
+                onChange={(e) => setSubActivityName(e.target.value)}
+                placeholder="Masukkan nama sub kegiatan"
+              />
             </div>
           </div>
         </CardContent>

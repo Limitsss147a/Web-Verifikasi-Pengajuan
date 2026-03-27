@@ -178,7 +178,7 @@ export default function BudgetsPage() {
                         </TableCell>
                       )}
                       <TableCell className="text-sm text-muted-foreground">
-                        {(budget as any).program?.name || '-'}
+                        {budget.program_name || (budget as any).program?.name || '-'}
                       </TableCell>
                       <TableCell className="text-right font-medium text-sm">
                         {formatCurrency(Number(budget.total_amount))}
