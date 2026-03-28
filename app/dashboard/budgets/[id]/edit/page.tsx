@@ -29,6 +29,9 @@ interface BudgetItemRow {
   item_name: string
   description: string
   specification: string
+  quantity_before: number
+  unit_before: string
+  unit_price_before: number
   quantity: number
   unit: string
   unit_price: number
@@ -95,12 +98,15 @@ export default function EditBudgetPage() {
         item_name: item.item_name,
         description: item.description || '',
         specification: item.specification || '',
+        quantity_before: Number(item.quantity_before || 0),
+        unit_before: item.unit_before || 'unit',
+        unit_price_before: Number(item.unit_price_before || 0),
         quantity: Number(item.quantity),
         unit: item.unit,
         unit_price: Number(item.unit_price),
       })))
     } else {
-      setItems([{ account_code: '', item_name: '', description: '', specification: '', quantity: 1, unit: 'unit', unit_price: 0 }])
+      setItems([{ account_code: '', item_name: '', description: '', specification: '', quantity_before: 0, unit_before: 'unit', unit_price_before: 0, quantity: 1, unit: 'unit', unit_price: 0 }])
     }
 
     setIsLoading(false)
@@ -125,7 +131,7 @@ export default function EditBudgetPage() {
   }
 
   function addItem() {
-    setItems(prev => [...prev, { account_code: '', item_name: '', description: '', specification: '', quantity: 1, unit: 'unit', unit_price: 0 }])
+    setItems(prev => [...prev, { account_code: '', item_name: '', description: '', specification: '', quantity_before: 0, unit_before: 'unit', unit_price_before: 0, quantity: 1, unit: 'unit', unit_price: 0 }])
   }
 
   function removeItem(index: number) {
@@ -137,7 +143,9 @@ export default function EditBudgetPage() {
     setItems(prev => prev.map((item, i) => i !== index ? item : { ...item, [field]: value }))
   }
 
+  const totalAmountBefore = items.reduce((sum, item) => sum + (item.quantity_before * item.unit_price_before), 0)
   const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+  const totalDifference = totalAmount - totalAmountBefore
 
   async function handleSubmit(submitNow: boolean) {
     if (!title.trim()) { toast.error('Judul wajib diisi'); return }
@@ -179,6 +187,9 @@ export default function EditBudgetPage() {
         item_name: item.item_name,
         description: item.description || null,
         specification: item.specification || null,
+        quantity_before: item.quantity_before,
+        unit_before: item.unit_before,
+        unit_price_before: item.unit_price_before,
         quantity: item.quantity,
         unit: item.unit,
         unit_price: item.unit_price,
@@ -291,41 +302,70 @@ export default function EditBudgetPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">#</TableHead>
-                  <TableHead className="min-w-[100px]">Kode Akun</TableHead>
-                  <TableHead className="min-w-[200px]">Nama Item *</TableHead>
-                  <TableHead className="min-w-[80px]">Qty</TableHead>
-                  <TableHead className="min-w-[80px]">Satuan</TableHead>
-                  <TableHead className="min-w-[140px]">Harga Satuan (Rp)</TableHead>
-                  <TableHead className="text-right min-w-[140px]">Total</TableHead>
-                  <TableHead className="w-[40px]" />
+                  <TableHead rowSpan={2} className="w-[50px] text-center border-r align-middle">#</TableHead>
+                  <TableHead rowSpan={2} className="min-w-[120px] text-center border-r align-middle">Kode Rekening</TableHead>
+                  <TableHead rowSpan={2} className="min-w-[200px] text-center border-r align-middle">Uraian / Item *</TableHead>
+                  <TableHead colSpan={4} className="text-center border-b border-r bg-muted/30">Sebelum</TableHead>
+                  <TableHead colSpan={4} className="text-center border-b border-r bg-primary/5">Setelah</TableHead>
+                  <TableHead rowSpan={2} className="text-center min-w-[140px] border-r align-middle font-semibold">Bertambah/<br/>Berkurang</TableHead>
+                  <TableHead rowSpan={2} className="w-[40px] text-center align-middle" />
+                </TableRow>
+                <TableRow>
+                  {/* Sebelum */}
+                  <TableHead className="min-w-[80px] text-center border-r bg-muted/30 text-xs">Vol</TableHead>
+                  <TableHead className="min-w-[80px] text-center border-r bg-muted/30 text-xs">Satuan</TableHead>
+                  <TableHead className="min-w-[120px] text-center border-r bg-muted/30 text-xs">Harga</TableHead>
+                  <TableHead className="text-right min-w-[120px] border-r bg-muted/30 text-xs">Jumlah</TableHead>
+                  {/* Setelah */}
+                  <TableHead className="min-w-[80px] text-center border-r bg-primary/5 text-xs">Vol</TableHead>
+                  <TableHead className="min-w-[80px] text-center border-r bg-primary/5 text-xs">Satuan</TableHead>
+                  <TableHead className="min-w-[120px] text-center border-r bg-primary/5 text-xs">Harga</TableHead>
+                  <TableHead className="text-right min-w-[120px] border-r bg-primary/5 text-xs">Jumlah</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="text-muted-foreground text-sm">{index + 1}</TableCell>
-                    <TableCell>
-                      <Input value={item.account_code} onChange={(e) => updateItem(index, 'account_code', e.target.value)} className="h-8 text-sm" />
+                  <TableRow key={index} className="group hover:bg-transparent">
+                    <TableCell className="text-muted-foreground text-sm text-center border-r">{index + 1}</TableCell>
+                    <TableCell className="border-r p-2 bg-background">
+                      <Input value={item.account_code} onChange={(e) => updateItem(index, 'account_code', e.target.value)} className="h-8 text-sm focus-visible:ring-1" />
                     </TableCell>
-                    <TableCell>
-                      <Input value={item.item_name} onChange={(e) => updateItem(index, 'item_name', e.target.value)} className="h-8 text-sm" />
+                    <TableCell className="border-r p-2 bg-background">
+                      <Input value={item.item_name} onChange={(e) => updateItem(index, 'item_name', e.target.value)} className="h-8 text-sm focus-visible:ring-1" />
                     </TableCell>
-                    <TableCell>
-                      <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))} className="h-8 text-sm w-20" />
+                    {/* Sebelum */}
+                    <TableCell className="border-r p-2 bg-muted/10">
+                      <Input type="number" min="0" value={item.quantity_before} onChange={(e) => updateItem(index, 'quantity_before', Number(e.target.value))} className="h-8 text-sm w-full bg-background border-input focus-visible:ring-1 text-center" />
                     </TableCell>
-                    <TableCell>
-                      <Input value={item.unit} onChange={(e) => updateItem(index, 'unit', e.target.value)} className="h-8 text-sm w-20" />
+                    <TableCell className="border-r p-2 bg-muted/10">
+                      <Input value={item.unit_before} onChange={(e) => updateItem(index, 'unit_before', e.target.value)} placeholder="unit" className="h-8 text-sm w-full bg-background border-input focus-visible:ring-1 text-center" />
                     </TableCell>
-                    <TableCell>
-                      <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))} className="h-8 text-sm" />
+                    <TableCell className="border-r p-2 bg-muted/10">
+                      <Input type="number" min="0" value={item.unit_price_before} onChange={(e) => updateItem(index, 'unit_price_before', Number(e.target.value))} className="h-8 text-sm bg-background border-input focus-visible:ring-1 text-right" />
                     </TableCell>
-                    <TableCell className="text-right font-medium text-sm">
+                    <TableCell className="text-right font-medium text-sm border-r p-2 bg-muted/10">
+                      {formatCurrency(item.quantity_before * item.unit_price_before)}
+                    </TableCell>
+                    {/* Setelah */}
+                    <TableCell className="border-r p-2 bg-primary/[0.02]">
+                      <Input type="number" min="0" value={item.quantity} onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))} className="h-8 text-sm w-full bg-background border-input focus-visible:ring-1 text-center" />
+                    </TableCell>
+                    <TableCell className="border-r p-2 bg-primary/[0.02]">
+                      <Input value={item.unit} onChange={(e) => updateItem(index, 'unit', e.target.value)} placeholder="unit" className="h-8 text-sm w-full bg-background border-input focus-visible:ring-1 text-center" />
+                    </TableCell>
+                    <TableCell className="border-r p-2 bg-primary/[0.02]">
+                      <Input type="number" min="0" value={item.unit_price} onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))} className="h-8 text-sm bg-background border-input focus-visible:ring-1 text-right" />
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm border-r p-2 bg-primary/[0.02]">
                       {formatCurrency(item.quantity * item.unit_price)}
                     </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeItem(index)} disabled={items.length <= 1}>
-                        <Trash2 className="h-3.5 w-3.5" />
+                    {/* Difference */}
+                    <TableCell className={`text-right font-semibold text-sm border-r p-2 align-middle bg-background ${(item.quantity * item.unit_price) - (item.quantity_before * item.unit_price_before) < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                      {((item.quantity * item.unit_price) - (item.quantity_before * item.unit_price_before)) < 0 ? '(' : ''}{formatCurrency(Math.abs((item.quantity * item.unit_price) - (item.quantity_before * item.unit_price_before)))}{((item.quantity * item.unit_price) - (item.quantity_before * item.unit_price_before)) < 0 ? ')' : ''}
+                    </TableCell>
+                    <TableCell className="p-2 text-center align-middle bg-background">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeItem(index)} disabled={items.length <= 1}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -333,8 +373,12 @@ export default function EditBudgetPage() {
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-right font-semibold">Total Anggaran</TableCell>
-                  <TableCell className="text-right font-bold text-base">{formatCurrency(totalAmount)}</TableCell>
+                  <TableCell colSpan={3} className="text-right font-bold border-r">Total Anggaran</TableCell>
+                  <TableCell colSpan={4} className="text-right font-bold border-r bg-muted/30">{formatCurrency(totalAmountBefore)}</TableCell>
+                  <TableCell colSpan={4} className="text-right font-bold border-r bg-primary/5">{formatCurrency(totalAmount)}</TableCell>
+                  <TableCell className={`text-right font-bold border-r ${totalDifference < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {totalDifference < 0 ? '(' : ''}{formatCurrency(Math.abs(totalDifference))}{totalDifference < 0 ? ')' : ''}
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               </TableFooter>

@@ -194,6 +194,10 @@ export default function BudgetDetailPage() {
     }
   }
 
+  const totalAmountBefore = items.reduce((sum, item) => sum + (Number(item.quantity_before || 0) * Number(item.unit_price_before || 0)), 0)
+  const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unit_price)), 0)
+  const totalDifference = totalAmount - totalAmountBefore
+
   return (
     <div className="space-y-6 max-w-5xl">
       {/* Header */}
@@ -316,37 +320,74 @@ export default function BudgetDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">#</TableHead>
-                  <TableHead>Kode Akun</TableHead>
-                  <TableHead>Nama Item</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead>Satuan</TableHead>
-                  <TableHead className="text-right">Harga Satuan</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead rowSpan={2} className="w-[50px] text-center border-r align-middle">#</TableHead>
+                  <TableHead rowSpan={2} className="min-w-[120px] text-center border-r align-middle">Kode Rekening</TableHead>
+                  <TableHead rowSpan={2} className="min-w-[200px] text-center border-r align-middle">Uraian / Item</TableHead>
+                  <TableHead colSpan={4} className="text-center border-b border-r bg-muted/30">Sebelum</TableHead>
+                  <TableHead colSpan={4} className="text-center border-b border-r bg-primary/5">Setelah</TableHead>
+                  <TableHead rowSpan={2} className="text-center min-w-[140px] border-r align-middle font-semibold">Bertambah/<br/>Berkurang</TableHead>
+                </TableRow>
+                <TableRow>
+                  {/* Sebelum */}
+                  <TableHead className="min-w-[80px] text-center border-r bg-muted/30 text-xs">Vol</TableHead>
+                  <TableHead className="min-w-[80px] text-center border-r bg-muted/30 text-xs">Satuan</TableHead>
+                  <TableHead className="min-w-[120px] text-center border-r bg-muted/30 text-xs">Harga</TableHead>
+                  <TableHead className="text-right min-w-[120px] border-r bg-muted/30 text-xs">Jumlah</TableHead>
+                  {/* Setelah */}
+                  <TableHead className="min-w-[80px] text-center border-r bg-primary/5 text-xs">Vol</TableHead>
+                  <TableHead className="min-w-[80px] text-center border-r bg-primary/5 text-xs">Satuan</TableHead>
+                  <TableHead className="min-w-[120px] text-center border-r bg-primary/5 text-xs">Harga</TableHead>
+                  <TableHead className="text-right min-w-[120px] border-r bg-primary/5 text-xs">Jumlah</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item, i) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="text-muted-foreground">{i + 1}</TableCell>
-                    <TableCell className="text-sm">{item.account_code || '-'}</TableCell>
-                    <TableCell>
-                      <div className="font-medium text-sm">{item.item_name}</div>
-                      {item.specification && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{item.specification}</p>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right text-sm">{item.quantity}</TableCell>
-                    <TableCell className="text-sm">{item.unit}</TableCell>
-                    <TableCell className="text-right text-sm">{formatCurrency(Number(item.unit_price))}</TableCell>
-                    <TableCell className="text-right font-medium text-sm">{formatCurrency(Number(item.total_price))}</TableCell>
-                  </TableRow>
-                ))}
+                {items.map((item, i) => {
+                  const qBefore = Number(item.quantity_before || 0)
+                  const pBefore = Number(item.unit_price_before || 0)
+                  const totalBefore = qBefore * pBefore
+                  
+                  const qAfter = Number(item.quantity)
+                  const pAfter = Number(item.unit_price)
+                  const totalAfter = qAfter * pAfter
+                  
+                  const diff = totalAfter - totalBefore
+                  
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell className="text-muted-foreground text-center border-r">{i + 1}</TableCell>
+                      <TableCell className="text-sm border-r">{item.account_code || '-'}</TableCell>
+                      <TableCell className="border-r">
+                        <div className="font-medium text-sm">{item.item_name}</div>
+                        {item.specification && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{item.specification}</p>
+                        )}
+                      </TableCell>
+                      {/* Sebelum */}
+                      <TableCell className="text-center text-sm border-r bg-muted/10">{qBefore}</TableCell>
+                      <TableCell className="text-center text-sm border-r bg-muted/10">{item.unit_before || item.unit}</TableCell>
+                      <TableCell className="text-right text-sm border-r bg-muted/10">{formatCurrency(pBefore)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm border-r bg-muted/10">{formatCurrency(totalBefore)}</TableCell>
+                      {/* Setelah */}
+                      <TableCell className="text-center text-sm border-r bg-primary/[0.02]">{qAfter}</TableCell>
+                      <TableCell className="text-center text-sm border-r bg-primary/[0.02]">{item.unit}</TableCell>
+                      <TableCell className="text-right text-sm border-r bg-primary/[0.02]">{formatCurrency(pAfter)}</TableCell>
+                      <TableCell className="text-right font-medium text-sm border-r bg-primary/[0.02]">{formatCurrency(totalAfter)}</TableCell>
+                      {/* Difference */}
+                      <TableCell className={`text-right font-semibold text-sm border-r align-middle ${diff < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                        {diff < 0 ? '(' : ''}{formatCurrency(Math.abs(diff))}{diff < 0 ? ')' : ''}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-right font-semibold">Total Anggaran</TableCell>
-                  <TableCell className="text-right font-bold text-base">{formatCurrency(Number(budget.total_amount))}</TableCell>
+                  <TableCell colSpan={3} className="text-right font-bold border-r">Total Anggaran</TableCell>
+                  <TableCell colSpan={4} className="text-right font-bold border-r bg-muted/30">{formatCurrency(totalAmountBefore)}</TableCell>
+                  <TableCell colSpan={4} className="text-right font-bold border-r bg-primary/5">{formatCurrency(totalAmount)}</TableCell>
+                  <TableCell className={`text-right font-bold border-r ${totalDifference < 0 ? 'text-destructive' : 'text-emerald-600'}`}>
+                    {totalDifference < 0 ? '(' : ''}{formatCurrency(Math.abs(totalDifference))}{totalDifference < 0 ? ')' : ''}
+                  </TableCell>
                 </TableRow>
               </TableFooter>
             </Table>

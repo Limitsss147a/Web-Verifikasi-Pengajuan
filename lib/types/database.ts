@@ -125,6 +125,10 @@ export interface BudgetItem {
   unit: string
   unit_price: number
   total_price: number
+  quantity_before?: number | null
+  unit_before?: string | null
+  unit_price_before?: number | null
+  total_price_before?: number | null
   sort_order: number
   created_at: string
   updated_at: string
@@ -208,6 +212,9 @@ export interface BudgetItemFormData {
   quantity: number
   unit: string
   unit_price: number
+  quantity_before?: number
+  unit_before?: string
+  unit_price_before?: number
 }
 
 // Status badge mapping
