@@ -112,13 +112,16 @@ const DotMap = () => {
     if (!canvas) return;
 
     const resizeObserver = new ResizeObserver(entries => {
+      if (!entries[0]) return;
       const { width, height } = entries[0].contentRect;
       setDimensions({ width, height });
       canvas.width = width;
       canvas.height = height;
     });
 
-    resizeObserver.observe(canvas.parentElement as Element);
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
     return () => resizeObserver.disconnect();
   }, []);
 

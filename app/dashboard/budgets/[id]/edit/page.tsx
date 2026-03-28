@@ -149,7 +149,6 @@ export default function EditBudgetPage() {
 
     try {
       const newStatus = submitNow ? 'submitted' : (originalStatus === 'revision' ? 'revision' : 'draft')
-      const newVersion = submitNow && originalStatus === 'revision' ? undefined : undefined
 
       const updateData: Record<string, unknown> = {
         title,
@@ -158,7 +157,7 @@ export default function EditBudgetPage() {
         activity_id: activityId || null,
         sub_activity_id: subActivityId || null,
         total_amount: totalAmount,
-        status: submitNow ? 'submitted' : (originalStatus === 'revision' ? 'submitted' : 'draft'),
+        status: newStatus,
       }
 
       if (submitNow) {
@@ -170,15 +169,9 @@ export default function EditBudgetPage() {
         }
       }
 
-      const { error: budgetError } = await supabase
-        .from('budgets')
-        .update(updateData)
-        .eq('id', budgetId)
-
-      if (budgetError) throw budgetError
-
-      // Delete old items and re-insert
-      await supabase.from('budget_items').delete().eq('budget_id', budgetId)
+      // 1. Delete old items and re-insert while the budget is still in 'draft' or 'revision' status
+      const { error: deleteError } = await supabase.from('budget_items').delete().eq('budget_id', budgetId)
+      if (deleteError) throw deleteError
 
       const budgetItems = validItems.map((item, index) => ({
         budget_id: budgetId,
@@ -195,11 +188,25 @@ export default function EditBudgetPage() {
       const { error: itemsError } = await supabase.from('budget_items').insert(budgetItems)
       if (itemsError) throw itemsError
 
+      // 2. Now update the budget itself (including its status)
+      const { error: budgetError } = await supabase
+        .from('budgets')
+        .update(updateData)
+        .eq('id', budgetId)
+
+      if (budgetError) throw budgetError
+
       toast.success(submitNow ? 'Pengajuan berhasil diajukan kembali' : 'Perubahan berhasil disimpan')
       router.push(`/dashboard/budgets/${budgetId}`)
-    } catch (error) {
-      console.error('Error:', error)
-      toast.error('Gagal menyimpan')
+    } catch (error: any) {
+      console.error('Detailed Error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: error,
+      })
+      toast.error(error.message || 'Gagal menyimpan')
     } finally {
       setIsSaving(false)
     }
