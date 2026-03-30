@@ -219,32 +219,33 @@ export default function DashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {statCards.map((card) => (
           <Card key={card.title} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-1">
                 {card.title}
               </CardTitle>
-              <div className={`rounded-lg p-2 ${card.bg}`}>
-                <card.icon className={`h-4 w-4 ${card.color}`} />
+              <div className={`rounded-lg p-1.5 sm:p-2 ${card.bg}`}>
+                <card.icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${card.color}`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold truncate">
                 {card.isText ? card.value : card.value.toLocaleString('id-ID')}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1">{card.description}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Charts & Table Row */}
-      <div className="grid gap-6 lg:grid-cols-5">
+      <div className="flex overflow-x-auto pb-6 pt-2 gap-4 -mx-4 px-4 snap-x snap-mandatory lg:grid lg:grid-cols-5 lg:overflow-visible lg:p-0 lg:mx-0 lg:flex-none hide-scrollbar">
         {/* Status Chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
+        <div className="w-[85vw] max-w-sm shrink-0 snap-center lg:w-auto lg:max-w-none lg:col-span-2">
+          <Card className="h-full relative overflow-hidden">
+            <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-base">Status Pengajuan</CardTitle>
             <CardDescription>Distribusi status anggaran</CardDescription>
           </CardHeader>
@@ -286,11 +287,13 @@ export default function DashboardPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
 
         {/* Recent Budgets Table */}
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <div className="w-[85vw] shrink-0 snap-center lg:w-auto lg:col-span-3">
+          <Card className="h-full relative overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
             <div>
               <CardTitle className="text-base">Pengajuan Terbaru</CardTitle>
               <CardDescription>
@@ -363,7 +366,8 @@ export default function DashboardPage() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   )

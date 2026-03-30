@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useProfile } from '@/hooks/use-profile'
 import { NotificationBell } from '@/components/notification-bell'
+import { MobileNav } from '@/components/mobile-nav'
 import {
   SidebarProvider,
   Sidebar,
@@ -43,6 +44,7 @@ import {
   LogOut,
   ChevronUp,
   Settings,
+  Archive,
 } from 'lucide-react'
 
 const userMenuItems = [
@@ -61,6 +63,7 @@ const adminMenuItems = [
 const adminManagementItems = [
   { title: 'Kelola Pengguna', href: '/dashboard/users', icon: Users },
   { title: 'Kelola Instansi', href: '/dashboard/institutions', icon: Building2 },
+  { title: 'Kelola Pengajuan', href: '/dashboard/manage-budgets', icon: Archive },
   { title: 'Audit Log', href: '/dashboard/audit-log', icon: ScrollText },
 ]
 
@@ -231,17 +234,20 @@ export default function DashboardLayout({
       <SidebarInset>
         {/* Top header bar */}
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-4" />
+          <SidebarTrigger className="-ml-1 hidden md:flex" />
+          <Separator orientation="vertical" className="mr-2 h-4 hidden md:block" />
           <div className="flex-1" />
           <NotificationBell />
         </header>
 
         {/* Page content */}
-        <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="flex-1 overflow-auto p-4 pb-24 md:p-6 md:pb-6">
           {children}
         </div>
       </SidebarInset>
+      
+      {/* Mobile Navigation */}
+      <MobileNav />
     </SidebarProvider>
   )
 }
