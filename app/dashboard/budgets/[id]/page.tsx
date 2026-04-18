@@ -194,31 +194,44 @@ export default function BudgetDetailPage() {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Dokumen RKA/DPA</CardTitle>
-              <CardDescription>File pendukung yang dilampirkan</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {documents.length > 0 ? documents.map((doc, index) => (
-                <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-md bg-background">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileText className={`h-8 w-8 shrink-0 ${doc.document_type === 'rka_dpa' ? 'text-emerald-500' : 'text-blue-500'}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.file_name}</p>
-                      <p className="text-xs text-muted-foreground uppercase">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
+        <div className="space-y-6 md:col-span-2">
+          {documents.length > 0 ? documents.map((doc, index) => (
+            <Card key={doc.id || index} className="overflow-hidden border-primary/20 bg-primary/5">
+              <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 justify-between bg-card">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className={`h-8 w-8 shrink-0 ${doc.document_type === 'rka_dpa' ? 'text-emerald-500' : 'text-blue-500'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{doc.file_name}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => handleDownload(doc)}>
-                    <Download className="mr-2 w-4 h-4" /> Buka
-                  </Button>
                 </div>
-              )) : (
-                <p className="text-sm text-muted-foreground italic">Tidak ada dokumen terlampir.</p>
-              )}
-            </CardContent>
-          </Card>
+                <Button variant="secondary" size="sm" onClick={() => handleDownload(doc)} className="shrink-0 bg-secondary hover:bg-secondary/80">
+                  <Download className="mr-2 w-4 h-4" /> Buka Dokumen
+                </Button>
+              </div>
+              <div className="p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b border-border/50 bg-card/50">
+                {ADMIN_ROLES.map((role) => {
+                  const statusStr = (doc as any)[role.key] || 'pending'
+                  const labelStr = statusLabels[statusStr as string] || 'Menunggu'
+                  
+                  return (
+                    <div key={role.key} className="p-4 flex flex-col justify-between gap-3">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <p className="font-bold text-xs text-foreground/80 uppercase tracking-wider">{role.label}</p>
+                        </div>
+                        <div>
+                          <Badge className={`${statusBadgeColor(statusStr)} border-0 shadow-none text-xs px-2.5 py-0.5 rounded-full`}>{labelStr}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )) : (
+            <Card><CardContent className="p-6"><p className="text-sm text-muted-foreground italic text-center">Tidak ada dokumen terlampir.</p></CardContent></Card>
+          )}
 
           {revisions.length > 0 && (
             <Card>
@@ -240,30 +253,6 @@ export default function BudgetDetailPage() {
               </CardContent>
             </Card>
           )}
-        </div>
-
-        <div>
-          <Card className="border-primary/20 sticky top-6">
-            <CardHeader className="bg-primary/5 pb-4">
-              <CardTitle className="text-base">Status Verifikasi</CardTitle>
-              <CardDescription>Status dari 4 admin reviewer</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {ADMIN_ROLES.map((role) => {
-                  const statusStr = budget[role.key] || 'pending'
-                  const labelStr = statusLabels[statusStr] || 'Menunggu'
-                  
-                  return (
-                    <div key={role.key} className="p-4 flex items-center justify-between">
-                      <p className="font-semibold text-sm">{role.label}</p>
-                      <Badge className={`${statusBadgeColor(statusStr)} border-0 shadow-none`}>{labelStr}</Badge>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

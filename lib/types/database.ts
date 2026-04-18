@@ -127,6 +127,10 @@ export interface BudgetDocument {
   document_type: string
   uploaded_by: string | null
   created_at: string
+  review_bapperida?: string
+  review_setda?: string
+  review_anggaran?: string
+  review_aset?: string
   // Joined data
   uploader?: Profile
 }
@@ -134,6 +138,7 @@ export interface BudgetDocument {
 export interface Revision {
   id: string
   budget_id: string
+  document_id?: string | null
   reviewer_id: string | null
   from_status: BudgetStatus
   to_status: BudgetStatus

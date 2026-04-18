@@ -44,6 +44,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+import { ThemeProvider } from '@/components/theme-provider'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -52,9 +54,16 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body className="font-sans antialiased min-h-screen">
-        {children}
-        <Toaster position="top-right" richColors closeButton />
-        <Analytics />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+          <Toaster position="top-right" richColors closeButton />
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   )

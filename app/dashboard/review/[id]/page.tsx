@@ -48,6 +48,7 @@ export default function ReviewDetailPage() {
   
   const [activeRole, setActiveRole] = useState<AdminRoleDef | null>(null)
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null)
+  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [comments, setComments] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -87,7 +88,7 @@ export default function ReviewDetailPage() {
   }
 
   async function handleReview() {
-    if (!activeRole || !reviewAction || !profile) return
+    if (!activeRole || !reviewAction || !profile || !activeDocumentId) return
     if (!comments.trim()) { toast.error('Komentar wajib diisi'); return }
 
     setIsProcessing(true)
@@ -96,52 +97,58 @@ export default function ReviewDetailPage() {
     try {
       const roleStatus = reviewAction === 'approve' ? 'approved' : reviewAction === 'revision' ? 'revision' : 'rejected'
       
-      const updates: any = {
+      const { error: docError } = await supabase.from('budget_documents').update({
         [activeRole.key]: roleStatus,
-      }
+      }).eq('id', activeDocumentId)
+      
+      if (docError) throw docError
 
-      // Automatically recalculate global status based on the 4 reviews:
-      const bApp = activeRole.key === 'review_bapperida' ? roleStatus : budget.review_bapperida
-      const sApp = activeRole.key === 'review_setda' ? roleStatus : budget.review_setda
-      const aApp = activeRole.key === 'review_anggaran' ? roleStatus : budget.review_anggaran
-      const asApp = activeRole.key === 'review_aset' ? roleStatus : budget.review_aset
-
-      const allStatuses = [bApp, sApp, aApp, asApp]
-      let newGlobalStatus: BudgetStatus = budget.status
-
-      if (allStatuses.includes('rejected')) {
-        newGlobalStatus = 'rejected'
-      } else if (allStatuses.includes('revision')) {
-        newGlobalStatus = 'revision'
-      } else if (allStatuses.every(s => s === 'approved')) {
-        newGlobalStatus = 'approved'
-      } else {
-        newGlobalStatus = 'under_review'
-      }
-
-      updates.status = newGlobalStatus
-      updates.reviewed_by = profile.id
-      updates.review_date = new Date().toISOString()
-
-      const { error: budgetError } = await supabase.from('budgets').update(updates).eq('id', budgetId)
-      if (budgetError) throw budgetError
-
-      // Create revision record specifically noting which role reviewed it
       const roleName = ADMIN_ROLES.find(r => r.key === activeRole.key)?.label
       const actionName = reviewAction === 'approve' ? 'Menyetujui' : reviewAction === 'revision' ? 'Meminta Revisi' : 'Menolak'
+      const docName = documents.find(d => d.id === activeDocumentId)?.file_name || 'Dokumen'
 
       const { error: revError } = await supabase.from('revisions').insert({
         budget_id: budgetId,
+        document_id: activeDocumentId,
         reviewer_id: profile.id,
         from_status: budget.status,
-        to_status: newGlobalStatus,
-        comments: `[${roleName}] - ${actionName}: ${comments}`,
+        to_status: budget.status,
+        comments: `[${roleName}] - ${actionName} dokumen "${docName}": ${comments}`,
       })
       if (revError) throw revError
+
+      const docsRes = await supabase.from('budget_documents').select('*').eq('budget_id', budgetId)
+      if (docsRes.data) {
+        let hasRejected = false
+        let hasRevision = false
+        let allApproved = true
+
+        for (const doc of docsRes.data) {
+          const docStatuses = [doc.review_bapperida, doc.review_setda, doc.review_anggaran, doc.review_aset]
+          if (docStatuses.includes('rejected')) hasRejected = true
+          if (docStatuses.includes('revision')) hasRevision = true
+          if (!docStatuses.every(s => s === 'approved')) allApproved = false
+        }
+
+        let newGlobalStatus: BudgetStatus = budget.status
+        if (hasRejected) newGlobalStatus = 'rejected'
+        else if (hasRevision) newGlobalStatus = 'revision'
+        else if (allApproved) newGlobalStatus = 'approved'
+        else newGlobalStatus = 'under_review'
+
+        if (newGlobalStatus !== budget.status) {
+          await supabase.from('budgets').update({
+            status: newGlobalStatus,
+            reviewed_by: profile.id,
+            review_date: new Date().toISOString()
+          }).eq('id', budgetId)
+        }
+      }
 
       toast.success(`Review ${roleName} berhasil disimpan`)
       setReviewAction(null)
       setActiveRole(null)
+      setActiveDocumentId(null)
       setComments('')
       fetchData()
     } catch (error) {
@@ -218,81 +225,68 @@ export default function ReviewDetailPage() {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Dokumen RKA/DPA</CardTitle>
-              <CardDescription>File pendukung yang dilampirkan</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {documents.length > 0 ? documents.map((doc, index) => (
-                <div key={index} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border rounded-md bg-background">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <FileText className={`h-8 w-8 shrink-0 ${doc.document_type === 'rka_dpa' ? 'text-emerald-500' : 'text-blue-500'}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.file_name}</p>
-                      <p className="text-xs text-muted-foreground uppercase">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
+        <div className="space-y-6 md:col-span-2">
+          {documents.length > 0 ? documents.map((doc, index) => (
+            <Card key={doc.id || index} className="overflow-hidden border-primary/20 bg-primary/5">
+              <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 justify-between bg-card">
+                <div className="flex items-center gap-3 min-w-0">
+                  <FileText className={`h-8 w-8 shrink-0 ${doc.document_type === 'rka_dpa' ? 'text-emerald-500' : 'text-blue-500'}`} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate">{doc.file_name}</p>
+                    <p className="text-xs text-muted-foreground uppercase">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => handleDownload(doc)}>
-                    <Download className="mr-2 w-4 h-4" /> Buka
-                  </Button>
                 </div>
-              )) : (
-                <p className="text-sm text-muted-foreground italic">Tidak ada dokumen terlampir.</p>
-              )}
-            </CardContent>
-          </Card>
-
-        </div>
-
-        <div>
-          {isAdmin && (
-            <Card className="border-primary/20 sticky top-6">
-              <CardHeader className="bg-primary/5 pb-4">
-                <CardTitle className="text-base">Panel Verifikasi 4 Admin</CardTitle>
-                <CardDescription>Review pengajuan mewakili bidang masing-masing</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {ADMIN_ROLES.map((role, index) => {
-                    const statusStr = budget[role.key] || 'pending'
+                <Button variant="secondary" size="sm" onClick={() => handleDownload(doc)} className="shrink-0 bg-secondary hover:bg-secondary/80">
+                  <Download className="mr-2 w-4 h-4" /> Buka Dokumen
+                </Button>
+              </div>
+              {isAdmin && (
+                <div className="p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b border-border/50 bg-card/50">
+                  {ADMIN_ROLES.map((role) => {
+                    const statusStr = doc[role.key] || 'pending'
                     const labelStr = statusLabels[statusStr] || 'Menunggu'
-                    
                     const isAuthorized = profile?.admin_role === 'superadmin' || profile?.admin_role === role.key.replace('review_', '')
                     
                     return (
-                      <div key={role.key} className={`p-4 flex flex-col gap-3 transition-colors ${!isAuthorized ? 'opacity-70 bg-muted/20' : 'hover:bg-muted/30'}`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-sm">{role.label}</p>
-                            {!isAuthorized && <Shield className="h-3 w-3 text-muted-foreground" aria-label="Tidak ada hak akses" />}
+                      <div key={role.key} className={`p-4 flex flex-col justify-between gap-3 ${!isAuthorized ? 'opacity-70 bg-muted/10' : 'hover:bg-muted/30 transition-colors'}`}>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-bold text-xs text-foreground/80 uppercase tracking-wider">{role.label}</p>
+                              {!isAuthorized && <Shield className="h-3 w-3 text-muted-foreground" aria-label="Tidak ada hak akses" />}
+                            </div>
                           </div>
-                          <Badge className={`${statusBadgeColor(statusStr)} border-0 shadow-none`}>{labelStr}</Badge>
+                          <div>
+                            <Badge className={`${statusBadgeColor(statusStr)} border-0 shadow-none text-xs px-2.5 py-0.5 rounded-full`}>{labelStr}</Badge>
+                          </div>
                         </div>
-                        {isAuthorized ? (
-                          <div className="flex gap-2 mt-1">
-                            <Button size="sm" variant="outline" className="flex-1 border-green-200 text-green-700 hover:bg-green-50" onClick={() => { setActiveRole(role); setReviewAction('approve') }}>
-                              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Setujui
+                        
+                        {isAuthorized && (
+                          <div className="grid grid-cols-3 gap-2 mt-2">
+                            <Button size="icon" variant="outline" className="h-8 w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800" title="Setujui" onClick={() => { setActiveRole(role); setActiveDocumentId(doc.id); setReviewAction('approve') }}>
+                              <CheckCircle2 className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline" className="flex-1 border-orange-200 text-orange-700 hover:bg-orange-50" onClick={() => { setActiveRole(role); setReviewAction('revision') }}>
-                              <AlertCircle className="mr-1.5 h-3.5 w-3.5" /> Revisi
+                            <Button size="icon" variant="outline" className="h-8 w-full border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800" title="Minta Revisi" onClick={() => { setActiveRole(role); setActiveDocumentId(doc.id); setReviewAction('revision') }}>
+                              <AlertCircle className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="outline" className="flex-1 border-red-200 text-red-700 hover:bg-red-50" onClick={() => { setActiveRole(role); setReviewAction('reject') }}>
-                              <XCircle className="mr-1.5 h-3.5 w-3.5" /> Tolak
+                            <Button size="icon" variant="outline" className="h-8 w-full border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800" title="Tolak" onClick={() => { setActiveRole(role); setActiveDocumentId(doc.id); setReviewAction('reject') }}>
+                              <XCircle className="h-4 w-4" />
                             </Button>
                           </div>
-                        ) : (
-                          <div className="text-xs text-muted-foreground flex items-center bg-muted/40 p-2.5 rounded-md mt-1 italic">
-                            Anda tidak memiliki hak akses untuk memberikan verifikasi pada bidang ini.
+                        )}
+                        {!isAuthorized && (
+                          <div className="text-[10.5px] text-muted-foreground mt-2 italic leading-relaxed bg-muted/30 p-2 rounded-md">
+                            Tidak memiliki askes untuk bidang ini.
                           </div>
                         )}
                       </div>
                     )
                   })}
                 </div>
-              </CardContent>
+              )}
             </Card>
+          )) : (
+            <Card><CardContent className="p-6"><p className="text-sm text-muted-foreground italic text-center">Tidak ada dokumen terlampir.</p></CardContent></Card>
           )}
 
           {revisions.length > 0 && (
@@ -318,8 +312,8 @@ export default function ReviewDetailPage() {
         </div>
       </div>
 
-      {activeRole && reviewAction && (
-        <Dialog open={!!reviewAction} onOpenChange={() => { setReviewAction(null); setActiveRole(null); setComments('') }}>
+      {activeRole && reviewAction && activeDocumentId && (
+        <Dialog open={!!reviewAction} onOpenChange={() => { setReviewAction(null); setActiveRole(null); setActiveDocumentId(null); setComments('') }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>

@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { toast } from 'sonner'
-import { ArrowLeft, Save, FileText, UploadCloud, Download } from 'lucide-react'
+import { ArrowLeft, Save, FileText, UploadCloud, Download, X } from 'lucide-react'
 import Link from 'next/link'
 
 export default function EditBudgetPage() {
@@ -21,8 +21,8 @@ export default function EditBudgetPage() {
 
   const [budget, setBudget] = useState<any>(null)
   const [title, setTitle] = useState('')
-  const [notaDinasFile, setNotaDinasFile] = useState<File | null>(null)
-  const [rkaDpaFile, setRkaDpaFile] = useState<File | null>(null)
+  const [notaDinasFiles, setNotaDinasFiles] = useState<File[]>([])
+  const [rkaDpaFiles, setRkaDpaFiles] = useState<File[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -62,21 +62,21 @@ export default function EditBudgetPage() {
 
       const docsToUpload = []
       
-      if (notaDinasFile) {
-        const notaExt = notaDinasFile.name.split('.').pop()
-        const notaFileName = `${budgetId}/nota_dinas_${Math.random().toString(36).substring(2, 9)}.${notaExt}`
-        const { error: notaUploadError } = await supabase.storage.from('budget_documents').upload(notaFileName, notaDinasFile)
-        if (!notaUploadError) {
-          docsToUpload.push({ budget_id: budgetId, file_name: notaDinasFile.name, file_path: notaFileName, file_type: notaDinasFile.type || 'application/pdf', file_size: notaDinasFile.size, document_type: 'nota_dinas', uploaded_by: profile!.id })
+      for (const file of notaDinasFiles) {
+        const ext = file.name.split('.').pop()
+        const fileName = `${budgetId}/nota_dinas_${Math.random().toString(36).substring(2, 9)}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('budget_documents').upload(fileName, file)
+        if (!uploadError) {
+          docsToUpload.push({ budget_id: budgetId, file_name: file.name, file_path: fileName, file_type: file.type || 'application/pdf', file_size: file.size, document_type: 'nota_dinas', uploaded_by: profile!.id })
         }
       }
 
-      if (rkaDpaFile) {
-        const rkaExt = rkaDpaFile.name.split('.').pop()
-        const rkaFileName = `${budgetId}/rka_dpa_${Math.random().toString(36).substring(2, 9)}.${rkaExt}`
-        const { error: rkaUploadError } = await supabase.storage.from('budget_documents').upload(rkaFileName, rkaDpaFile)
-        if (!rkaUploadError) {
-          docsToUpload.push({ budget_id: budgetId, file_name: rkaDpaFile.name, file_path: rkaFileName, file_type: rkaDpaFile.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', file_size: rkaDpaFile.size, document_type: 'rka_dpa', uploaded_by: profile!.id })
+      for (const file of rkaDpaFiles) {
+        const ext = file.name.split('.').pop()
+        const fileName = `${budgetId}/rka_dpa_${Math.random().toString(36).substring(2, 9)}.${ext}`
+        const { error: uploadError } = await supabase.storage.from('budget_documents').upload(fileName, file)
+        if (!uploadError) {
+          docsToUpload.push({ budget_id: budgetId, file_name: file.name, file_path: fileName, file_type: file.type || 'application/pdf', file_size: file.size, document_type: 'rka_dpa', uploaded_by: profile!.id })
         }
       }
 
@@ -135,36 +135,80 @@ export default function EditBudgetPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label>1. Nota Dinas</Label>
-              <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-muted/20 text-center">
-                <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                {notaDinasFile ? (
-                  <div className="text-sm">
-                    <p className="font-medium text-primary truncate max-w-[200px]">{notaDinasFile.name}</p>
+              <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center bg-muted/20 text-center transition-colors min-h-[160px]">
+                {notaDinasFiles.length > 0 ? (
+                  <div className="w-full space-y-2 mb-4">
+                    {notaDinasFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-background border rounded p-2 text-left">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 shrink-0 text-primary" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate w-[150px] sm:w-[200px]">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setNotaDinasFiles(prev => prev.filter((_, i) => i !== idx))} disabled={isSaving}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                ) : <p className="text-xs text-muted-foreground">Biarkan kosong jika tidak direvisi</p>}
-                <div className="mt-4">
-                  <Label htmlFor="nota_dinas_upload" className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3">
-                    <UploadCloud className="mr-2 h-3 w-3" /> Pilih File
+                ) : (
+                  <>
+                    <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground px-4">Biarkan kosong jika tidak ada tambahan dokumen Nota Dinas baru</p>
+                  </>
+                )}
+                <div className="mt-auto pt-2">
+                  <Label htmlFor="nota_dinas_upload" className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3 mb-0">
+                    <UploadCloud className="mr-2 h-3 w-3" />
+                    Tambah File Baru
                   </Label>
-                  <Input id="nota_dinas_upload" type="file" className="hidden" onChange={(e) => setNotaDinasFile(e.target.files?.[0] || null)} disabled={isSaving} />
+                  <Input id="nota_dinas_upload" type="file" multiple className="hidden" onChange={(e) => {
+                    const newFiles = Array.from(e.target.files || [])
+                    setNotaDinasFiles(prev => [...prev, ...newFiles])
+                    e.target.value = ''
+                  }} disabled={isSaving} />
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col gap-2">
               <Label>2. RKA/DPA</Label>
-              <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-muted/20 text-center">
-                <FileText className="h-8 w-8 text-muted-foreground mb-2" />
-                {rkaDpaFile ? (
-                   <div className="text-sm">
-                     <p className="font-medium text-emerald-600 truncate max-w-[200px]">{rkaDpaFile.name}</p>
-                   </div>
-                ) : <p className="text-xs text-muted-foreground">Biarkan kosong jika tidak direvisi</p>}
-                <div className="mt-4">
-                  <Label htmlFor="rka_dpa_upload" className="cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3">
-                    <UploadCloud className="mr-2 h-3 w-3" /> Pilih File
+              <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center bg-muted/20 text-center transition-colors min-h-[160px]">
+                {rkaDpaFiles.length > 0 ? (
+                  <div className="w-full space-y-2 mb-4">
+                    {rkaDpaFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-background border rounded p-2 text-left">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 shrink-0 text-emerald-600" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium truncate w-[150px] sm:w-[200px]">{file.name}</p>
+                            <p className="text-[10px] text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                          </div>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => setRkaDpaFiles(prev => prev.filter((_, i) => i !== idx))} disabled={isSaving}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <FileText className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-xs text-muted-foreground px-4">Biarkan kosong jika tidak ada tambahan dokumen RKA/DPA baru</p>
+                  </>
+                )}
+                <div className="mt-auto pt-2">
+                  <Label htmlFor="rka_dpa_upload" className="cursor-pointer bg-emerald-600 text-white hover:bg-emerald-700 inline-flex items-center justify-center rounded-md text-xs font-medium h-8 px-3 mb-0">
+                    <UploadCloud className="mr-2 h-3 w-3" />
+                    Tambah File Baru
                   </Label>
-                  <Input id="rka_dpa_upload" type="file" className="hidden" onChange={(e) => setRkaDpaFile(e.target.files?.[0] || null)} disabled={isSaving} />
+                  <Input id="rka_dpa_upload" type="file" multiple className="hidden" onChange={(e) => {
+                    const newFiles = Array.from(e.target.files || [])
+                    setRkaDpaFiles(prev => [...prev, ...newFiles])
+                    e.target.value = ''
+                  }} disabled={isSaving} />
                 </div>
               </div>
             </div>
