@@ -27,7 +27,7 @@ const features = [
   {
     icon: Users,
     title: "MANAJEMEN PENGGUNA",
-    description: "Sistem hak akses dan verifikasi bertingkat untuk transparansi dan akuntabilitas."
+    description: "Sistem hak akses dan verifikasi bertingkat untuk akuntabilitas data."
   }
 ]
 
@@ -95,7 +95,7 @@ export default function LandingPage() {
               SIVRON<span className="text-sky-500">.</span>
             </h1>
             <p className="font-sans text-lg md:text-xl text-white/60 max-w-2xl mx-auto mt-8 font-light">
-              Sistem verifikasi RKA online yang modern, transparan, dan terintegrasi penuh untuk perencanaan hingga pelaporan anggaran.
+              Sistem verifikasi RKA online yang modern dan terintegrasi penuh untuk perencanaan hingga pelaporan anggaran.
             </p>
           </motion.div>
         </section>

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     default: 'SIVRON - Sistem Informasi Anggaran',
     template: '%s | SIVRON',
   },
-  description: 'Sistem penganggaran elektronik SIVRON untuk pengelolaan dan pengajuan anggaran pemerintah daerah secara digital, transparan, dan akuntabel.',
+  description: 'Sistem penganggaran elektronik SIVRON untuk pengelolaan dan pengajuan anggaran pemerintah daerah secara digital dan akuntabel.',
   keywords: ['sivron', 'e-budgeting', 'penganggaran', 'anggaran', 'pemerintah', 'APBD', 'RAB', 'digital'],
   authors: [{ name: 'SIVRON Team' }],
   generator: 'v0.app',
