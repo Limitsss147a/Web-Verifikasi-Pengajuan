@@ -4,10 +4,13 @@ import { useTheme } from 'next-themes';
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-type DottedSurfaceProps = Omit<React.ComponentProps<'div'>, 'ref'>;
+type DottedSurfaceProps = Omit<React.ComponentProps<'div'>, 'ref'> & {
+  forceDark?: boolean;
+};
 
-export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
+export function DottedSurface({ className, forceDark, ...props }: DottedSurfaceProps) {
 	const { theme } = useTheme();
+	const isDark = forceDark || theme === 'dark';
 
 	const containerRef = useRef<HTMLDivElement>(null);
 	const sceneRef = useRef<{
@@ -63,7 +66,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 				const z = iy * SEPARATION - (AMOUNTY * SEPARATION) / 2;
 
 				positions.push(x, y, z);
-				if (theme === 'dark') {
+				if (isDark) {
 					colors.push(200, 200, 200);
 				} else {
 					colors.push(0, 0, 0);
@@ -97,7 +100,9 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 		const animate = () => {
 			animationId = requestAnimationFrame(animate);
 
-			const positionAttribute = geometry.attributes.position;
+			const positionAttribute = geometry.getAttribute('position');
+			if (!positionAttribute) return;
+
 			const positions = positionAttribute.array as Float32Array;
 
 			let i = 0;
@@ -179,7 +184,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 				}
 			}
 		};
-	}, [theme]);
+	}, [isDark]);
 
 	return (
 		<div

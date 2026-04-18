@@ -9,21 +9,21 @@ import Image from "next/image"
 
 export default function LandingPage() {
   return (
-    <main className="relative min-h-screen w-full overflow-hidden bg-background flex flex-col items-center justify-center p-4">
+    <main className="dark relative min-h-screen w-full overflow-hidden bg-[#020617] flex flex-col items-center justify-center p-4">
       {/* Background Image (Blurred) */}
       <div className="absolute inset-0 z-0">
         <Image
           src="/landing-assets/bg-logo.png"
           alt="Background"
           fill
-          className="object-cover opacity-20 blur-xl"
+          className="object-cover opacity-30 blur-2xl"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/20 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#020617]/80 via-[#020617]/40 to-[#020617]" />
       </div>
 
       {/* Three.js Dotted Surface */}
-      <DottedSurface className="opacity-40" />
+      <DottedSurface className="opacity-40" forceDark />
 
       {/* Content */}
       <div className="relative z-10 max-w-4xl w-full flex flex-col items-center text-center space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
