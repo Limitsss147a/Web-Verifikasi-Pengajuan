@@ -55,6 +55,7 @@ export default function ReviewDetailPage() {
   const [editingReview, setEditingReview] = useState<any>(null)
   const [editComment, setEditComment] = useState('')
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [budgetId])
 
@@ -163,18 +164,23 @@ export default function ReviewDetailPage() {
     }
   }
 
-  async function handleDeleteReview(id: string) {
-    if (!confirm('Apakah Anda yakin ingin menghapus review ini?')) return
-    setIsDeleting(id)
+  async function handleDeleteConfirm() {
+    if (!deletingReviewId) return
+    setIsDeleting(deletingReviewId)
     try {
       const supabase = createClient()
-      const { error } = await supabase.from('revisions').delete().eq('id', id)
+      const { data, error } = await supabase.from('revisions').delete().eq('id', deletingReviewId).select()
       if (error) throw error
-      toast.success('Review berhasil dihapus')
-      fetchData()
-    } catch (err) {
+      if (!data || data.length === 0) {
+         toast.error('Gagal menghapus: Akses ditolak oleh database (RLS)')
+      } else {
+         toast.success('Review berhasil dihapus')
+         fetchData()
+         setDeletingReviewId(null)
+      }
+    } catch (err: any) {
       console.error(err)
-      toast.error('Gagal menghapus review')
+      toast.error(err.message || 'Gagal menghapus review')
     } finally {
       setIsDeleting(null)
     }
@@ -185,14 +191,18 @@ export default function ReviewDetailPage() {
     setIsProcessing(true)
     try {
       const supabase = createClient()
-      const { error } = await supabase.from('revisions').update({ comments: editComment }).eq('id', editingReview.id)
+      const { data, error } = await supabase.from('revisions').update({ comments: editComment }).eq('id', editingReview.id).select()
       if (error) throw error
-      toast.success('Review berhasil diperbarui')
-      setEditingReview(null)
-      fetchData()
-    } catch (err) {
+      if (!data || data.length === 0) {
+         toast.error('Gagal mengubah: Akses ditolak oleh database (RLS)')
+      } else {
+         toast.success('Review berhasil diperbarui')
+         setEditingReview(null)
+         fetchData()
+      }
+    } catch (err: any) {
       console.error(err)
-      toast.error('Gagal memperbarui review')
+      toast.error(err.message || 'Gagal memperbarui review')
     } finally {
       setIsProcessing(false)
     }
@@ -356,8 +366,8 @@ export default function ReviewDetailPage() {
                               <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-600 hover:bg-sky-50" onClick={() => { setEditingReview(rev); setEditComment(rev.comments || '') }}>
                                 <Edit2 className="w-3.5 h-3.5" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50" disabled={isDeleting === rev.id} onClick={() => handleDeleteReview(rev.id)}>
-                                {isDeleting === rev.id ? <Spinner className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50" disabled={isDeleting === rev.id} onClick={() => setDeletingReviewId(rev.id)}>
+                                <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </div>
                           )}
@@ -393,6 +403,31 @@ export default function ReviewDetailPage() {
                   <Button onClick={handleUpdateReview} disabled={isProcessing} className="bg-sky-600 hover:bg-sky-700 text-white">
                     {isProcessing && <Spinner className="mr-2 h-4 w-4" />}
                     Simpan Perubahan
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
+
+          {/* Delete Dialog */}
+          {deletingReviewId && (
+            <Dialog open={!!deletingReviewId} onOpenChange={() => setDeletingReviewId(null)}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-red-600 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5" /> Konfirmasi Hapus
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                  <p className="text-gray-700 text-sm">
+                    Apakah Anda yakin ingin menghapus catatan review ini secara permanen? Aksi ini tidak dapat dibatalkan.
+                  </p>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setDeletingReviewId(null)}>Batal</Button>
+                  <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting !== null}>
+                    {isDeleting ? <Spinner className="mr-2 h-4 w-4" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                    Ya, Hapus Review
                   </Button>
                 </DialogFooter>
               </DialogContent>
