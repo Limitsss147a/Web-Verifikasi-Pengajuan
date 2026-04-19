@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare, FileText, Download, Clock, Shield, Lock } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare, FileText, Download, Clock, Shield, Lock, Trash2, Edit2 } from 'lucide-react'
 import Link from 'next/link'
 
 type AdminReviewRole = 'review_bapperida' | 'review_setda' | 'review_anggaran' | 'review_aset'
@@ -51,6 +51,10 @@ export default function ReviewDetailPage() {
   const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null)
   const [comments, setComments] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  
+  const [editingReview, setEditingReview] = useState<any>(null)
+  const [editComment, setEditComment] = useState('')
+  const [isDeleting, setIsDeleting] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [budgetId])
 
@@ -154,6 +158,41 @@ export default function ReviewDetailPage() {
     } catch (error) {
       console.error('Error:', error)
       toast.error('Gagal memproses review')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  async function handleDeleteReview(id: string) {
+    if (!confirm('Apakah Anda yakin ingin menghapus review ini?')) return
+    setIsDeleting(id)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('revisions').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Review berhasil dihapus')
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      toast.error('Gagal menghapus review')
+    } finally {
+      setIsDeleting(null)
+    }
+  }
+
+  async function handleUpdateReview() {
+    if (!editingReview || !editComment.trim()) return
+    setIsProcessing(true)
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('revisions').update({ comments: editComment }).eq('id', editingReview.id)
+      if (error) throw error
+      toast.success('Review berhasil diperbarui')
+      setEditingReview(null)
+      fetchData()
+    } catch (err) {
+      console.error(err)
+      toast.error('Gagal memperbarui review')
     } finally {
       setIsProcessing(false)
     }
@@ -290,17 +329,43 @@ export default function ReviewDetailPage() {
           )}
 
           {revisions.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader><CardTitle className="text-base">Riwayat Review</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+            <Card className="mt-6 border-0 shadow-md">
+              <CardHeader className="bg-sky-500/5 border-b border-sky-100 rounded-t-xl pb-4">
+                <CardTitle className="text-lg font-bold text-sky-900 flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-sky-500" /> Riwayat Review Dokumen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-2 relative">
                   {revisions.map((rev, index) => (
                     <div key={rev.id} className="relative flex gap-4">
-                      {index < revisions.length - 1 && <div className="absolute left-[13px] top-8 bottom-0 w-px bg-border" />}
-                      <div className="flex-1 pb-4">
-                        <p className="text-xs text-muted-foreground">{(rev as any).reviewer?.full_name || 'System'} • {formatDateTime(rev.created_at)}</p>
+                      {index < revisions.length - 1 && <div className="absolute left-[15px] top-10 bottom-[-24px] w-0.5 bg-gray-200 rounded-full" />}
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 border-[3px] border-white shadow-sm mt-1 z-10 content-start">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-4 hover:shadow-md transition-shadow">
+                        <div className="py-2.5 px-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50/80 gap-2">
+                          <div>
+                            <p className="text-sm font-bold text-gray-800">{(rev as any).reviewer?.full_name || 'System'}</p>
+                            <p className="text-[11px] text-gray-500 font-medium tracking-wide flex items-center gap-1.5 mt-0.5">
+                              <Clock className="w-3 h-3" /> {formatDateTime(rev.created_at)}
+                            </p>
+                          </div>
+                          {(profile?.id === rev.reviewer_id || isAdmin) && (
+                            <div className="flex items-center gap-1 sm:self-start">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-sky-600 hover:bg-sky-50" onClick={() => { setEditingReview(rev); setEditComment(rev.comments || '') }}>
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-500 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50" disabled={isDeleting === rev.id} onClick={() => handleDeleteReview(rev.id)}>
+                                {isDeleting === rev.id ? <Spinner className="w-3.5 h-3.5" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                         {rev.comments && (
-                          <div className="mt-1.5 rounded-md bg-muted/50 p-2.5 text-sm">{rev.comments}</div>
+                          <div className="p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            {rev.comments}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -308,6 +373,30 @@ export default function ReviewDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Edit Dialog */}
+          {editingReview && (
+            <Dialog open={!!editingReview} onOpenChange={() => { setEditingReview(null); setEditComment('') }}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Review</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-2">
+                    <Label>Komentar</Label>
+                    <Textarea value={editComment} onChange={(e) => setEditComment(e.target.value)} rows={5} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingReview(null)}>Batal</Button>
+                  <Button onClick={handleUpdateReview} disabled={isProcessing} className="bg-sky-600 hover:bg-sky-700 text-white">
+                    {isProcessing && <Spinner className="mr-2 h-4 w-4" />}
+                    Simpan Perubahan
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
