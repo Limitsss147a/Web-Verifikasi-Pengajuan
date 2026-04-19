@@ -108,7 +108,7 @@ export default function SignUpPage() {
       </div>
 
       {/* Floating Centered Card */}
-      <div className="flex w-full max-w-5xl bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden min-h-[650px] relative z-10 border border-gray-100/50">
+      <div className="flex w-full max-w-5xl mt-16 md:mt-0 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden min-h-[600px] md:min-h-[650px] relative z-10 border border-gray-100/50">
         
         {/* Left Panel - Dark SIVRON Branding replacing old E-budgeting */}
         <div className="hidden lg:flex flex-col w-1/2 p-12 bg-[#0A0A0F] text-white overflow-hidden relative justify-center items-center">
@@ -133,7 +133,7 @@ export default function SignUpPage() {
         </div>
 
         {/* Right Panel - Form */}
-        <div className="w-full lg:w-1/2 p-8 sm:p-10 md:p-12 bg-white flex flex-col justify-center max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="w-full lg:w-1/2 p-6 md:p-10 lg:p-12 bg-white flex flex-col justify-center max-h-[90vh] overflow-y-auto custom-scrollbar">
           
           <div className="mb-8 text-left">
             <h2 className="font-heading text-3xl font-bold text-gray-900 mb-2">Pendaftaran Akun</h2>

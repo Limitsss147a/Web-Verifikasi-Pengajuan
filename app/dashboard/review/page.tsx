@@ -23,7 +23,7 @@ export default function ReviewPage() {
   const { profile, isAdmin, isLoading: profileLoading } = useProfile()
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<string>('pending')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {

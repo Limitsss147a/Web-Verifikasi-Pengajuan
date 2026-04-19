@@ -21,7 +21,7 @@ export default function LandingPage() {
 
       {/* Header Navigation */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0F]/50 backdrop-blur-md border-b border-white/5">
-        <div className="container mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 bg-white rounded p-1 shadow-sm">
               <Image src="/logo-anggaran-2.jpeg" alt="SIVRON" width={32} height={32} className="object-contain rounded-lg" />
@@ -39,7 +39,7 @@ export default function LandingPage() {
             <Link href="#presence" className="text-xs font-mono tracking-widest hover:text-sky-500 transition-colors">PRESENCE</Link>
           </nav>
 
-          <Button asChild className="rounded-full bg-white text-black hover:bg-gray-200 uppercase tracking-widest text-xs px-6 h-10 font-bold transition-transform hover:scale-105">
+          <Button asChild className="rounded-full bg-white text-black hover:bg-gray-200 uppercase tracking-widest text-[10px] md:text-xs px-4 md:px-6 h-8 md:h-10 font-bold transition-transform hover:scale-105">
             <Link href="/auth/login">Akses Portal</Link>
           </Button>
         </div>
@@ -49,7 +49,7 @@ export default function LandingPage() {
       <div className="relative z-10 w-full pt-20">
         
         {/* Hero Section */}
-        <section id="portal" className="min-h-[85vh] flex flex-col items-center justify-center relative px-4">
+        <section id="portal" className="min-h-[85vh] flex flex-col items-center justify-center relative px-2 sm:px-4">
           {/* Subtle Radial Glow */}
           <div
             aria-hidden="true"
@@ -67,8 +67,8 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <h2 className="font-mono text-sm tracking-[0.4em] text-sky-500 mb-6">SISTEM VERIFIKASI RKA ONLINE</h2>
-            <h1 className="font-heading text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter mb-4 text-glow transition-all">
+            <h2 className="font-mono text-xs sm:text-sm tracking-[0.2em] sm:tracking-[0.4em] text-sky-500 mb-6">SISTEM VERIFIKASI RKA ONLINE</h2>
+            <h1 className="font-heading text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tighter mb-4 text-glow transition-all">
               SIVRON<span className="text-sky-500">.</span>
             </h1>
           </motion.div>

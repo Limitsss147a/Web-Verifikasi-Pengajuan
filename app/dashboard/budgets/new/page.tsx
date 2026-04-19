@@ -27,10 +27,6 @@ export default function NewBudgetPage() {
       return
     }
 
-    if (notaDinasFiles.length === 0) {
-      toast.error('Minimal satu file Nota Dinas wajib diunggah')
-      return
-    }
 
     if (rkaDpaFiles.length === 0) {
       toast.error('Minimal satu file RKA/DPA wajib diunggah')
@@ -182,7 +178,7 @@ export default function NewBudgetPage() {
         <CardContent className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label>1. Nota Dinas *</Label>
+              <Label>1. Nota Dinas (Opsional)</Label>
               <div className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center bg-muted/20 text-center hover:bg-muted/40 transition-colors min-h-[160px]">
                 {notaDinasFiles.length > 0 ? (
                   <div className="w-full space-y-2 mb-4">

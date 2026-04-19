@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
         <span className="font-heading font-bold text-gray-800 text-sm hidden sm:block tracking-wide">SIVRON — BKAD</span>
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-8 sm:p-12 border border-gray-100/50">
+      <div className="w-full max-w-md mt-16 md:mt-0 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 sm:p-12 border border-gray-100/50">
         <div className="text-center mb-8">
           <div className="mx-auto flex items-center justify-center w-16 h-16 bg-white rounded-2xl mb-6 shadow-[0_0_30px_rgba(255,255,255,0.2)] p-1.5">
             <Image src="/logo-anggaran-2.jpeg" alt="SIVRON Logo" width={50} height={50} className="object-contain rounded-xl" />
