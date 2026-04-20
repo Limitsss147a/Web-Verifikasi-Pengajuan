@@ -1,13 +1,13 @@
 'use client'
 
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect, Suspense, useTransition } from 'react'
+import { generateCaptcha, loginWithCaptcha } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { Field, FieldLabel, FieldMessage } from '@/components/ui/field'
-import { Shield, Lock, User, RefreshCw } from 'lucide-react'
+import { Lock, ShieldCheck, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -15,38 +15,91 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [captchaState, setCaptchaState] = useState<'idle' | 'verifying' | 'verified'>('idle')
+  const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // CAPTCHA state
+  const [captcha, setCaptcha] = useState<{
+    question: string
+    token: string
+    timestamp: number
+  } | null>(null)
+  const [captchaAnswer, setCaptchaAnswer] = useState('')
+  const [captchaLoading, setCaptchaLoading] = useState(true)
+
+  // Load CAPTCHA on mount
+  useEffect(() => {
+    loadCaptcha()
+  }, [])
+
+  async function loadCaptcha() {
+    setCaptchaLoading(true)
+    setCaptchaAnswer('')
+    try {
+      const data = await generateCaptcha()
+      setCaptcha(data)
+    } catch {
+      setError('Gagal memuat verifikasi. Silakan muat ulang halaman.')
+    } finally {
+      setCaptchaLoading(false)
+    }
+  }
+
+  // Sanitize redirect — only allow internal paths starting with /dashboard
+  function getSafeRedirect(): string {
+    const raw = searchParams.get('redirect')
+    if (!raw) return '/dashboard'
+    // Only allow paths that start with / and don't contain protocol or double slashes
+    if (
+      raw.startsWith('/dashboard') &&
+      !raw.includes('//') &&
+      !raw.includes(':')
+    ) {
+      return raw
+    }
+    return '/dashboard'
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (captchaState !== 'verified') {
-      setError('Harap verifikasi reCAPTCHA terlebih dahulu.')
+    if (!captcha) {
+      setError('Verifikasi belum dimuat. Silakan muat ulang halaman.')
       return
     }
 
-    const supabase = createClient()
-    setIsLoading(true)
+    if (!captchaAnswer.trim()) {
+      setError('Harap jawab soal verifikasi.')
+      return
+    }
+
     setError(null)
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
+    startTransition(async () => {
+      const result = await loginWithCaptcha({
         email,
         password,
+        captchaAnswer,
+        captchaToken: captcha.token,
+        captchaTimestamp: captcha.timestamp,
       })
-      if (error) throw error
-      // Using router.push immediately after successful auth avoids the loop
-      const params = new URLSearchParams(window.location.search);
-      const redirectTo = params.get('redirect') || '/dashboard';
-      router.push(redirectTo)
-      router.refresh()
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'Terjadi kesalahan saat login')
-    } finally {
-      setIsLoading(false)
-    }
+
+      if (result.newCaptcha) {
+        setCaptcha(result.newCaptcha)
+        setCaptchaAnswer('')
+      }
+
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+
+      if (result.success) {
+        const redirectTo = getSafeRedirect()
+        router.push(redirectTo)
+        router.refresh()
+      }
+    })
   }
 
   return (
@@ -61,7 +114,7 @@ function LoginForm() {
       {/* Floating Centered Card */}
       <div className="flex w-full max-w-5xl bg-white rounded-2xl md:rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden min-h-[500px] md:min-h-[650px] relative z-10 border border-gray-100/50">
 
-        {/* Left Panel - Dark SIVRON Branding replacing old E-budgeting */}
+        {/* Left Panel - Dark SIVRON Branding */}
         <div className="hidden lg:flex flex-col w-1/2 p-12 bg-[#0A0A0F] text-white overflow-hidden relative justify-center items-center">
           <div className="absolute inset-0 bg-[url('/diamond-pattern.svg')] opacity-5 z-0" />
           <div className="absolute inset-x-0 bottom-0 pointer-events-none neon-border opacity-30 h-1/2 z-0" />
@@ -92,7 +145,7 @@ function LoginForm() {
             <p className="text-sm text-gray-500 leading-relaxed">Masukkan email dan password untuk mengakses sistem verifikasi SIVRON.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-5">
             <Field>
               <FieldLabel htmlFor="email" className="font-bold text-sm text-gray-700 mb-2 block">
                 Email <span className="text-sky-600">*</span>
@@ -100,13 +153,14 @@ function LoginForm() {
               <div className="relative">
                 <Input
                   id="email"
-                  type="text"
+                  type="email"
                   placeholder="nama@instansi.go.id"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-4 h-12 bg-white border-gray-200 rounded-xl focus-visible:ring-sky-500 focus-visible:border-sky-500 transition-all text-sm"
-                  disabled={isLoading}
+                  disabled={isPending}
                 />
               </div>
             </Field>
@@ -124,39 +178,58 @@ function LoginForm() {
                   type="password"
                   placeholder="Masukkan password"
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-4 h-12 bg-white border-gray-200 rounded-xl focus-visible:ring-sky-500 focus-visible:border-sky-500 transition-all text-sm"
-                  disabled={isLoading}
+                  disabled={isPending}
                 />
               </div>
             </Field>
 
-            {/* Functional Dummy reCAPTCHA */}
-            <div className="flex items-center justify-between p-3 bg-[#f8fbff] border border-gray-200 rounded-xl mt-4">
-              <div className="flex items-center gap-3">
-                <div
-                  onClick={() => {
-                    if (captchaState !== 'idle') return;
-                    setCaptchaState('verifying')
-                    setTimeout(() => {
-                      setCaptchaState('verified')
-                      setError(null)
-                    }, 1200)
-                  }}
-                  className={`flex items-center justify-center w-6 h-6 border-2 rounded-sm cursor-pointer transition-colors ${captchaState === 'verified' ? 'bg-green-500 border-green-500' :
-                      'bg-white border-gray-300 hover:border-sky-500'
-                    }`}
-                >
-                  {captchaState === 'verifying' && <Spinner className="w-3 h-3 text-sky-500" />}
-                  {captchaState === 'verified' && <div className="text-white font-bold text-xs select-none">✓</div>}
+            {/* Server-verified Math CAPTCHA */}
+            <div className="p-4 bg-[#f8fbff] border border-gray-200 rounded-xl space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sky-600" />
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Verifikasi Keamanan</span>
                 </div>
-                <span className="text-xs font-medium text-gray-600">Saya bukan robot</span>
+                <button
+                  type="button"
+                  onClick={loadCaptcha}
+                  disabled={captchaLoading || isPending}
+                  className="text-sky-500 hover:text-sky-600 transition-colors disabled:opacity-50"
+                  title="Muat ulang soal"
+                >
+                  <RefreshCw className={`w-4 h-4 ${captchaLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
-              <div className="flex flex-col items-center">
-                <RefreshCw className="w-5 h-5 text-sky-500 mb-1" />
-                <span className="text-[7px] text-gray-400">reCAPTCHA</span>
-              </div>
+
+              {captchaLoading ? (
+                <div className="flex items-center justify-center py-3">
+                  <Spinner className="w-5 h-5 text-sky-500" />
+                </div>
+              ) : captcha ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-4 py-2.5 font-mono text-lg font-bold text-gray-800 select-none tracking-wider shadow-sm">
+                    {captcha.question} =
+                  </div>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="?"
+                    autoComplete="off"
+                    value={captchaAnswer}
+                    onChange={(e) => setCaptchaAnswer(e.target.value.replace(/[^0-9-]/g, ''))}
+                    className="h-11 w-20 text-center font-mono text-lg font-bold border-gray-200 rounded-lg focus-visible:ring-sky-500"
+                    disabled={isPending}
+                    maxLength={4}
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-red-500">Gagal memuat verifikasi. Klik refresh.</p>
+              )}
             </div>
 
             {error && (
@@ -167,10 +240,10 @@ function LoginForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold tracking-wide text-sm mt-6 transition-all shadow-lg shadow-sky-600/30 disabled:opacity-50"
-              disabled={isLoading || captchaState !== 'verified'}
+              className="w-full h-12 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold tracking-wide text-sm mt-4 transition-all shadow-lg shadow-sky-600/30 disabled:opacity-50"
+              disabled={isPending || !captcha}
             >
-              {isLoading ? (
+              {isPending ? (
                 <>
                   <Spinner className="mr-2 h-4 w-4" />
                   MEMPROSES...
@@ -198,7 +271,7 @@ function LoginForm() {
   )
 }
 
-function ArrowRight(props: any) {
+function ArrowRight(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

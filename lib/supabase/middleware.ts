@@ -71,6 +71,41 @@ export async function updateSession(request: NextRequest) {
   }
 
   /**
+   * Admin-only routes — server-side enforcement (defense-in-depth).
+   * Even though RLS protects database data, this prevents non-admins from
+   * accessing admin UI pages at the middleware level.
+   */
+  const adminOnlyPrefixes = [
+    '/dashboard/users',
+    '/dashboard/review',
+    '/dashboard/institutions',
+    '/dashboard/manage-budgets',
+    '/dashboard/audit-log',
+  ]
+
+  const isAdminRoute = adminOnlyPrefixes.some((prefix) => pathname.startsWith(prefix))
+
+  if (user && isAdminRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile || profile.role !== 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.searchParams.set('forbidden', '1')
+
+      const redirectResponse = NextResponse.redirect(url)
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+      })
+      return redirectResponse
+    }
+  }
+
+  /**
    * If user is logged in and trying to access auth pages (login, sign-up, etc.), 
    * redirect them to the dashboard.
    */

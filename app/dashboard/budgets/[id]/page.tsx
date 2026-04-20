@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Edit, Send, Trash2, FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare,
+  ArrowLeft, Edit, Send, Trash2, FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare, Printer,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -154,6 +154,9 @@ export default function BudgetDetailPage() {
               Ajukan
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => window.print()} className="print:hidden">
+            <Printer className="mr-1 h-3 w-3" /> Cetak Laporan
+          </Button>
           {canDelete && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -255,6 +258,33 @@ export default function BudgetDetailPage() {
           )}
         </div>
       </div>
+
+      <style jsx global>{`
+        @media print {
+          nav, aside, .print\\:hidden, button, [role="alertdialog"] {
+            display: none !important;
+          }
+          body {
+            background-color: white !important;
+            color: black !important;
+          }
+          .max-w-4xl {
+            max-width: 100% !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .Card {
+            border: 1px solid #eee !important;
+            box-shadow: none !important;
+          }
+          .Badge {
+            border: 1px solid #ccc !important;
+            background: transparent !important;
+            color: black !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

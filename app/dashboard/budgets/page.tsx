@@ -34,32 +34,61 @@ export default function BudgetsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const pageSize = 10
 
   useEffect(() => {
-    if (!profileLoading && profile) fetchBudgets()
-  }, [profileLoading, profile])
+    if (!profileLoading && profile) {
+      setCurrentPage(1) // Reset to first page when filter changes
+      fetchBudgets(1)
+    }
+  }, [profileLoading, profile, statusFilter, searchQuery])
 
-  async function fetchBudgets() {
+  useEffect(() => {
+    if (!profileLoading && profile && currentPage > 1) {
+      fetchBudgets(currentPage)
+    }
+  }, [currentPage])
+
+  async function fetchBudgets(page: number) {
     const supabase = createClient()
     setIsLoading(true)
 
-    const { data, error } = await supabase
-      .from('budgets')
-      .select('*, institution:institutions(name, code), program:programs(name, code), submitter:profiles!budgets_submitted_by_fkey(full_name)')
-      .order('updated_at', { ascending: false })
+    try {
+      let query = supabase
+        .from('budgets')
+        .select('*, institution:institutions(name, code), program:programs(name, code), submitter:profiles!budgets_submitted_by_fkey(full_name)', { count: 'exact' })
+      
+      // Apply filters
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter)
+      }
+      
+      if (searchQuery) {
+        query = query.ilike('title', `%${searchQuery}%`)
+      }
 
-    if (!error && data) {
-      setBudgets(data as Budget[])
+      // Apply pagination
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+
+      const { data, error, count } = await query
+        .order('updated_at', { ascending: false })
+        .range(from, to)
+
+      if (!error && data) {
+        setBudgets(data as Budget[])
+        setTotalCount(count || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching budgets:', error)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
-  const filteredBudgets = budgets.filter(b => {
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter
-    const matchesSearch = !searchQuery || 
-      b.title.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesStatus && matchesSearch
-  })
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   if (profileLoading) {
     return <div className="space-y-4">
@@ -124,7 +153,7 @@ export default function BudgetsPage() {
             <div className="p-6 space-y-3">
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
             </div>
-          ) : filteredBudgets.length === 0 ? (
+          ) : budgets.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
               <h3 className="font-semibold text-lg">Belum ada pengajuan</h3>
@@ -143,55 +172,87 @@ export default function BudgetsPage() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Judul Pengajuan</TableHead>
-                  {isAdmin && <TableHead>Instansi</TableHead>}
-                  <TableHead>Program</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Tanggal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredBudgets.map((budget) => {
-                  const config = statusConfig[budget.status as BudgetStatus]
-                  return (
-                    <TableRow key={budget.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell>
-                        <Link
-                          href={`/dashboard/budgets/${budget.id}`}
-                          className="font-medium hover:underline underline-offset-4"
-                        >
-                          {budget.title}
-                        </Link>
-                        {budget.version > 1 && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            v{budget.version}
-                          </span>
-                        )}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-sm">
-                          {(budget as any).institution?.name || '-'}
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Judul Pengajuan</TableHead>
+                    {isAdmin && <TableHead>Instansi</TableHead>}
+                    <TableHead>Program</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tanggal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {budgets.map((budget) => {
+                    const config = statusConfig[budget.status as BudgetStatus]
+                    return (
+                      <TableRow key={budget.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/budgets/${budget.id}`}
+                            className="font-medium hover:underline underline-offset-4"
+                          >
+                            {budget.title}
+                          </Link>
+                          {budget.version > 1 && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              v{budget.version}
+                            </span>
+                          )}
                         </TableCell>
-                      )}
-                      <TableCell className="text-sm text-muted-foreground">
-                        {budget.program_name || (budget as any).program?.name || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${config.color} border-0 text-[11px]`}>
-                          {config.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(budget.updated_at)}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                        {isAdmin && (
+                          <TableCell className="text-sm">
+                            {(budget as any).institution?.name || '-'}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-sm text-muted-foreground">
+                          {budget.program_name || (budget as any).program?.name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${config.color} border-0 text-[11px]`}>
+                            {config.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(budget.updated_at)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+              
+              {/* Pagination UI */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
+                <p className="text-xs text-muted-foreground">
+                  Menampilkan <span className="font-bold text-gray-900">{budgets.length}</span> dari <span className="font-bold text-gray-900">{totalCount}</span> pengajuan
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1 || isLoading}
+                    className="h-8 text-xs font-bold"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <div className="flex items-center justify-center min-w-[2rem] h-8 text-xs font-bold bg-gray-50 rounded-md border border-gray-100">
+                    {currentPage} / {totalPages || 1}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage >= totalPages || isLoading}
+                    className="h-8 text-xs font-bold"
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

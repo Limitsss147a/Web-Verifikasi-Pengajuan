@@ -13,6 +13,44 @@ import { toast } from 'sonner'
 import { ArrowLeft, Save, Send, FileText, UploadCloud, X } from 'lucide-react'
 import Link from 'next/link'
 
+// ---------- File Upload Validation ----------
+const ALLOWED_EXTENSIONS = ['.pdf', '.doc', '.docx', '.xls', '.xlsx']
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]
+const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+const MAX_FILE_SIZE_LABEL = '25 MB'
+
+function validateFile(file: File): string | null {
+  const ext = '.' + (file.name.split('.').pop()?.toLowerCase() || '')
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    return `File "${file.name}" tidak diizinkan. Format yang diterima: ${ALLOWED_EXTENSIONS.join(', ')}`
+  }
+  if (!ALLOWED_MIME_TYPES.includes(file.type) && file.type !== 'application/octet-stream') {
+    return `Format file "${file.name}" tidak dikenali. Gunakan PDF, DOC, DOCX, XLS, atau XLSX.`
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return `File "${file.name}" melebihi batas ${MAX_FILE_SIZE_LABEL}. Ukuran file: ${(file.size / 1024 / 1024).toFixed(1)} MB`
+  }
+  return null
+}
+
+function validateFiles(files: File[]): { valid: File[]; errors: string[] } {
+  const valid: File[] = []
+  const errors: string[] = []
+  for (const file of files) {
+    const err = validateFile(file)
+    if (err) errors.push(err)
+    else valid.push(file)
+  }
+  return { valid, errors }
+}
+// ---------- End Validation ----------
+
 export default function NewBudgetPage() {
   const router = useRouter()
   const { profile, isLoading: profileLoading } = useProfile()
@@ -208,9 +246,10 @@ export default function NewBudgetPage() {
                     <UploadCloud className="mr-2 h-3 w-3" />
                     Tambah File
                   </Label>
-                  <Input id="nota_dinas_upload" type="file" multiple className="hidden" onChange={(e) => {
-                    const newFiles = Array.from(e.target.files || [])
-                    setNotaDinasFiles(prev => [...prev, ...newFiles])
+                  <Input id="nota_dinas_upload" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={(e) => {
+                    const { valid, errors } = validateFiles(Array.from(e.target.files || []))
+                    errors.forEach(err => toast.error(err))
+                    if (valid.length > 0) setNotaDinasFiles(prev => [...prev, ...valid])
                     e.target.value = ''
                   }} disabled={isSaving} />
                 </div>
@@ -248,9 +287,10 @@ export default function NewBudgetPage() {
                     <UploadCloud className="mr-2 h-3 w-3" />
                     Tambah File
                   </Label>
-                  <Input id="rka_dpa_upload" type="file" multiple className="hidden" onChange={(e) => {
-                    const newFiles = Array.from(e.target.files || [])
-                    setRkaDpaFiles(prev => [...prev, ...newFiles])
+                  <Input id="rka_dpa_upload" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx" className="hidden" onChange={(e) => {
+                    const { valid, errors } = validateFiles(Array.from(e.target.files || []))
+                    errors.forEach(err => toast.error(err))
+                    if (valid.length > 0) setRkaDpaFiles(prev => [...prev, ...valid])
                     e.target.value = ''
                   }} disabled={isSaving} />
                 </div>

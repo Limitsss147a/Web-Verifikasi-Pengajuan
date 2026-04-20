@@ -78,43 +78,54 @@ export default function DashboardPage() {
     setIsLoading(true)
 
     try {
-      // Fetch budgets
-      const { data: budgets } = await supabase
+      if (!profile) return
+
+      // 1. Fetch dashboard stats via RPC (Server-side aggregation)
+      const { data: statsData, error: statsError } = await supabase.rpc('get_dashboard_stats', {
+        user_id: profile.id,
+        is_admin_user: isAdmin
+      })
+
+      if (statsError) throw statsError
+
+      if (statsData) {
+        const s = statsData.summary
+        setStats({
+          total: Number(s.total_count),
+          submitted: Number(s.submitted_count),
+          underReview: Number(s.under_review_count),
+          revision: Number(s.revision_count),
+          approved: Number(s.approved_count),
+          rejected: Number(s.rejected_count),
+          draft: Number(s.draft_count),
+          totalAmount: Number(s.grand_total_amount),
+          approvedAmount: Number(s.approved_total_amount),
+        })
+
+        // Map status distribution for chart
+        const chartData = (statsData.status_distribution || [])
+          .map((item: any) => {
+            const config = statusChartConfig[item.status as keyof typeof statusChartConfig]
+            return {
+              status: config?.label || item.status,
+              count: Number(item.count),
+              fill: config?.color || 'var(--color-muted-foreground)',
+            }
+          })
+          .filter((d: any) => d.count > 0)
+        
+        setStatusData(chartData)
+      }
+
+      // 2. Fetch only the 5 most recent budgets
+      const { data: recentData } = await supabase
         .from('budgets')
         .select('*, institution:institutions(name, code), submitter:profiles!budgets_submitted_by_fkey(full_name)')
         .order('updated_at', { ascending: false })
+        .limit(5)
 
-      if (budgets) {
-        const total = budgets.length
-        const submitted = budgets.filter(b => b.status === 'submitted').length
-        const underReview = budgets.filter(b => b.status === 'under_review').length
-        const revision = budgets.filter(b => b.status === 'revision').length
-        const approved = budgets.filter(b => b.status === 'approved').length
-        const rejected = budgets.filter(b => b.status === 'rejected').length
-        const draft = budgets.filter(b => b.status === 'draft').length
-        const totalAmount = budgets.reduce((sum, b) => sum + Number(b.total_amount), 0)
-        const approvedAmount = budgets
-          .filter(b => b.status === 'approved')
-          .reduce((sum, b) => sum + Number(b.total_amount), 0)
-
-        setStats({
-          total, submitted, underReview, revision, approved, rejected, draft,
-          totalAmount, approvedAmount,
-        })
-
-        setRecentBudgets(budgets.slice(0, 5) as Budget[])
-
-        // Pie chart data
-        const chartData = [
-          { status: 'Draft', count: draft, fill: 'var(--color-muted-foreground)' },
-          { status: 'Diajukan', count: submitted, fill: 'var(--color-chart-1)' },
-          { status: 'Ditinjau', count: underReview, fill: 'var(--color-chart-3)' },
-          { status: 'Revisi', count: revision, fill: 'var(--color-chart-4)' },
-          { status: 'Disetujui', count: approved, fill: 'var(--color-chart-2)' },
-          { status: 'Ditolak', count: rejected, fill: 'var(--color-destructive)' },
-        ].filter(d => d.count > 0)
-
-        setStatusData(chartData)
+      if (recentData) {
+        setRecentBudgets(recentData as Budget[])
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)

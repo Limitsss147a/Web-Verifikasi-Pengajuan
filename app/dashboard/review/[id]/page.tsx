@@ -17,7 +17,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare, FileText, Download, Clock, Shield, Lock, Trash2, Edit2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, ArrowRightLeft, MessageSquare, FileText, Download, Clock, Shield, Lock, Trash2, Edit2, ClipboardCheck } from 'lucide-react'
 import Link from 'next/link'
 
 type AdminReviewRole = 'review_bapperida' | 'review_setda' | 'review_anggaran' | 'review_aset'
@@ -208,15 +208,21 @@ export default function ReviewDetailPage() {
     }
   }
 
-  // Mark as under_review when admin first views submitted budget
-  useEffect(() => {
-    if (budget && budget.status === 'submitted' && isAdmin && profile) {
-      const supabase = createClient()
-      supabase.from('budgets').update({ status: 'under_review', reviewed_by: profile.id }).eq('id', budgetId).then(() => {
-        setBudget((prev: any) => prev ? { ...prev, status: 'under_review' } : prev)
-      })
+  // Explicit action: admin clicks "Mulai Review" to change status
+  async function handleStartReview() {
+    if (!budget || budget.status !== 'submitted' || !isAdmin || !profile) return
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('budgets')
+      .update({ status: 'under_review', reviewed_by: profile.id })
+      .eq('id', budgetId)
+    if (!error) {
+      setBudget((prev: any) => prev ? { ...prev, status: 'under_review' } : prev)
+      toast.success('Status berhasil diubah ke "Sedang Ditinjau"')
+    } else {
+      toast.error('Gagal memulai review')
     }
-  }, [budget?.status, isAdmin])
+  }
 
   if (isLoading) return <div className="space-y-6 max-w-4xl"><Skeleton className="h-8 w-64" /><Skeleton className="h-40 w-full" /></div>
   if (!budget) return <div className="flex flex-col items-center justify-center py-20"><p>Pengajuan tidak ditemukan</p></div>
@@ -258,6 +264,12 @@ export default function ReviewDetailPage() {
             </div>
           </div>
         </div>
+        {/* Explicit "Start Review" button for submitted budgets */}
+        {isAdmin && budget.status === 'submitted' && (
+          <Button onClick={handleStartReview} className="bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-full px-6 shrink-0">
+            <ClipboardCheck className="mr-2 h-4 w-4" /> Mulai Review
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -325,7 +337,7 @@ export default function ReviewDetailPage() {
                         )}
                         {!isAuthorized && (
                           <div className="text-[10.5px] text-muted-foreground mt-2 italic leading-relaxed bg-muted/30 p-2 rounded-md">
-                            Tidak memiliki askes untuk bidang ini.
+                            Tidak memiliki akses untuk bidang ini.
                           </div>
                         )}
                       </div>
