@@ -200,16 +200,16 @@ export default function BudgetDetailPage() {
         <div className="space-y-6 md:col-span-2">
           {documents.length > 0 ? documents.map((doc, index) => (
             <Card key={doc.id || index} className="overflow-hidden border-primary/20 bg-primary/5">
-              <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 justify-between bg-card">
-                <div className="flex items-center gap-3 min-w-0">
+              <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center gap-4 justify-between bg-card min-w-0 w-full overflow-hidden">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <FileText className={`h-8 w-8 shrink-0 ${doc.document_type === 'rka_dpa' ? 'text-emerald-500' : 'text-blue-500'}`} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{doc.file_name}</p>
-                    <p className="text-xs text-muted-foreground uppercase">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p className="text-xs text-muted-foreground uppercase truncate">{doc.document_type.replace('_', ' ')} • {(doc.file_size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                 </div>
                 <Button variant="secondary" size="sm" onClick={() => handleDownload(doc)} className="shrink-0 bg-secondary hover:bg-secondary/80">
-                  <Download className="mr-2 w-4 h-4" /> Buka Dokumen
+                  <Download className="mr-2 w-4 h-4 shrink-0" /> Buka Dokumen
                 </Button>
               </div>
               <div className="p-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x border-b border-border/50 bg-card/50">
@@ -247,7 +247,7 @@ export default function BudgetDetailPage() {
                       <div className="flex-1 pb-4">
                         <p className="text-xs text-muted-foreground">{(rev as any).reviewer?.full_name || 'System'} • {formatDateTime(rev.created_at)}</p>
                         {rev.comments && (
-                          <div className="mt-1.5 rounded-md bg-muted/50 p-2.5 text-sm">{rev.comments}</div>
+                          <div className="mt-1.5 rounded-md bg-muted/50 p-2.5 text-sm break-words whitespace-pre-wrap overflow-hidden">{rev.comments}</div>
                         )}
                       </div>
                     </div>

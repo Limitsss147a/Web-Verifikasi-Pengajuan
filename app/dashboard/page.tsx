@@ -252,8 +252,8 @@ export default function DashboardPage() {
             {/* Left Accent Strip */}
             <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${card.gradient} to-transparent opacity-80`} />
             
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-3">
-              <CardTitle className="text-xs sm:text-[11px] uppercase font-bold tracking-widest text-muted-foreground line-clamp-1">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 p-5 pb-3">
+              <CardTitle className="text-xs sm:text-[11px] uppercase font-bold tracking-widest text-muted-foreground whitespace-normal break-words max-w-[calc(100%-40px)] leading-tight">
                 {card.title}
               </CardTitle>
               <div className={`rounded-xl p-2 ${card.bg} border transition-transform group-hover:scale-110 duration-300`}>
