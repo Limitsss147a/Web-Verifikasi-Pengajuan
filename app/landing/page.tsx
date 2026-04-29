@@ -1,6 +1,6 @@
 'use client'
 
-import { DottedSurface } from "@/components/ui/dotted-surface"
+
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { ArrowRight } from "lucide-react"
@@ -14,10 +14,8 @@ export default function LandingPage() {
       {/* Neon Glow Frame */}
       <div className="fixed inset-0 pointer-events-none z-50 neon-border opacity-50" />
 
-      {/* Three.js Dotted Surface Background */}
-      <div className="fixed inset-0 z-0">
-        <DottedSurface className="size-full" forceDark />
-      </div>
+      {/* Background Effect Removed (Three.js dependency removed) */}
+      <div className="fixed inset-0 z-0 bg-gradient-to-b from-[#0A0A0F] to-[#0A0A0F]/80" />
 
       {/* Header Navigation */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0F]/50 backdrop-blur-md border-b border-white/5">
