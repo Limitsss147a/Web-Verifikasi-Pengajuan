@@ -1,6 +1,6 @@
 import { updateSession } from '@/lib/supabase/middleware'
 import { NextResponse, type NextRequest } from 'next/server'
-// import { kv } from '@vercel/kv' // Uncomment after npm install finishes
+import { kv } from '@vercel/kv'
 
 export async function middleware(request: NextRequest) {
   // 1. Session Management
@@ -8,7 +8,6 @@ export async function middleware(request: NextRequest) {
 
   // 2. Rate Limiting (10 requests per 10 seconds per IP)
   // Only apply to critical routes (e.g., /api/auth, /api/submissions)
-  /* 
   if (request.nextUrl.pathname.startsWith('/api/') || request.nextUrl.pathname.startsWith('/auth/')) {
     const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1'
     const limit = 10
@@ -27,7 +26,6 @@ export async function middleware(request: NextRequest) {
       console.warn('Rate limiting failed or KV is not configured:', e)
     }
   }
-  */
 
   return response
 }
