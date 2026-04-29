@@ -13,24 +13,26 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Install pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 10
+
     - name: Use Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.x'
-        cache: 'npm'
+        cache: 'pnpm'
         
     - name: Install dependencies
-      run: npm ci --legacy-peer-deps
+      run: pnpm install --frozen-lockfile
       
     - name: Run Linter
-      run: npm run lint
+      run: pnpm run lint
       
     - name: Type Check
-      run: npx tsc --noEmit
-      
-    - name: Security Scan (Audit)
-      run: npm audit --audit-level=high
+      run: pnpm exec tsc --noEmit
       
     # Note: E2E and Unit Tests will be added here once written
-    # - name: Run Tests
-    #   run: npm run test
+    - name: Run Tests
+      run: pnpm run test
